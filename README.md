@@ -1,0 +1,1 @@
+# ci_django-project
