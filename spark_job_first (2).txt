@@ -4,6 +4,10 @@ from pyspark.shell import spark
 import random
 from pyspark.sql.functions import regexp_extract
 
+
+
+
+
 log_file_pattern = ['ApplicationLog', 'UserEventLog']
 
 if __name__ == '__main__':
