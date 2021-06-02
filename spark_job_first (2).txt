@@ -1,0 +1,41 @@
+# from pyspark import SparkContext, SparkConf
+import re
+from pyspark.shell import spark
+import random
+from pyspark.sql.functions import regexp_extract
+
+log_file_pattern = ['ApplicationLog', 'UserEventLog']
+
+if __name__ == '__main__':
+    sub_type = r'subtype=([^ ]*)'
+    source_ip_pattern = r'srcip=([^ ]*)'
+    destination_ip = r'dstip=([^ ]*)'
+    user_pattern = r'user=([^ ]*)'
+    date_pattern = r'date=([^ ]*)'
+
+    for file_type in log_file_pattern:
+        base_rdd = spark.read.text("hdfs:///logs_input/{0}-*.log".format(file_type))
+        # base_df.printSchema()
+        # base_df_rdd = base_df.rdd
+        # sample_logs = [item['value'] for item in base_rdd.take(1)]
+        # print(sample_logs)
+
+        # sub_type = [re.search(sub_type, item).group(1)
+        #             if re.search(sub_type, item)
+        #             else 'sub_type not found'
+        #             for item in [item['value'] for item in base_rdd.take(1)]]
+        # print(sub_type[0])
+        if base_rdd:
+            logs_df = base_rdd.select(regexp_extract('value', source_ip_pattern, 1).alias('evt_srcip'),
+                                      regexp_extract('value', destination_ip, 1).alias('evt_dest_ip'),
+                                      regexp_extract('value', date_pattern, 1).alias('evt_date'))
+            # print(logs_df.show(logs_df.count(), False))
+            # need to correct path
+            logs_df.write.csv("hdfs:///logs_output//{0}.csv".format(file_type), header=True)
+
+            source_ip_sum_df = (logs_df
+                                .groupBy('evt_srcip')
+                                .count()
+                                .sort('count', ascending=False).limit(10))
+            source_ip_sum_df.write.csv(
+                "hdfs:///logs_output//topsourceip_{0}.csv".format(file_type), header=True)
